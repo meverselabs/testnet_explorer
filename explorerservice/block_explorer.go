@@ -23,7 +23,7 @@ import (
 	"github.com/fletaio/fleta_testnet/core/chain"
 	"github.com/fletaio/fleta_testnet/core/types"
 	"github.com/fletaio/fleta_testnet/encoding"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 
 	"github.com/dgraph-io/badger"
 )
