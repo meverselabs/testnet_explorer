@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/fletaio/explorer/explorerservice"
+	"github.com/fletaio/testnet_explorer/explorerservice"
 	"github.com/shurcooL/vfsgen"
 )
 
