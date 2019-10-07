@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/fletaio/fleta_testnet/core/pile"
-	"github.com/fletaio/testnet_explorer_old/explorerservice"
+	"github.com/fletaio/testnet_explorer/explorerservice"
 
 	"github.com/fletaio/fleta_testnet/cmd/app"
 	"github.com/fletaio/fleta_testnet/cmd/closer"
