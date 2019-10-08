@@ -13,7 +13,7 @@ import (
 
 func (e *BlockExplorer) transactions() []*countInfo {
 	if len(e.transactionCountList) > 50 {
-		return e.transactionCountList[:50]
+		return e.transactionCountList[len(e.transactionCountList)-50:]
 	} else {
 		return e.transactionCountList
 	}
