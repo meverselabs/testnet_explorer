@@ -1,4 +1,4 @@
-module github.com/fletaio/explorer
+module github.com/fletaio/testnet_explorer
 
 go 1.12
 
