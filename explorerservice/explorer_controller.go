@@ -6,20 +6,19 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/fletaio/fleta/core/backend"
 	"github.com/fletaio/fleta_testnet/common/hash"
 	"github.com/fletaio/fleta_testnet/common/util"
 	"github.com/fletaio/fleta_testnet/core/chain"
 	"github.com/fletaio/fleta_testnet/encoding"
-
-	"github.com/dgraph-io/badger"
 )
 
 type ExplorerController struct {
-	db    *badger.DB
+	db    backend.StoreBackend
 	block *BlockExplorer
 }
 
-func NewExplorerController(db *badger.DB, block *BlockExplorer) *ExplorerController {
+func NewExplorerController(db backend.StoreBackend, block *BlockExplorer) *ExplorerController {
 	return &ExplorerController{
 		db:    db,
 		block: block,
@@ -52,12 +51,8 @@ func (e *ExplorerController) BlockDetail(r *http.Request) (map[string]string, er
 			return nil, ErrNotEnoughParameter
 		}
 
-		if err := e.db.View(func(txn *badger.Txn) error {
-			item, err := txn.Get([]byte(hash))
-			if err != nil {
-				return err
-			}
-			v, err := item.ValueCopy(nil)
+		if err := e.db.View(func(txn backend.StoreReader) error {
+			v, err := txn.Get([]byte(hash))
 			if err != nil {
 				return err
 			}
@@ -94,13 +89,10 @@ func (e *ExplorerController) TransactionDetail(r *http.Request) (map[string]stri
 		return nil, err
 	}
 	var v []byte
-	if err := e.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(h[:])
-		if err != nil {
-			return err
-		}
-		v, err = item.ValueCopy(nil)
-		return nil
+	if err := e.db.View(func(txn backend.StoreReader) error {
+		var err error
+		v, err = txn.Get(h[:])
+		return err
 	}); err != nil {
 		return nil, err
 	}

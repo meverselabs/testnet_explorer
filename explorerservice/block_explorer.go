@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/fletaio/fleta/core/backend"
+	_ "github.com/fletaio/fleta/core/backend/buntdb_driver"
 	"github.com/fletaio/webserver"
 
 	"github.com/fletaio/fleta_testnet/pof"
@@ -24,8 +24,6 @@ import (
 	"github.com/fletaio/fleta_testnet/core/types"
 	"github.com/fletaio/fleta_testnet/encoding"
 	"github.com/labstack/echo/v4"
-
-	"github.com/dgraph-io/badger"
 )
 
 var (
@@ -65,7 +63,7 @@ type BlockExplorer struct {
 	lastestTransactionList []txInfos
 	lastestTransactionMap  map[string]bool
 
-	db *badger.DB
+	db backend.StoreBackend
 
 	cs *pof.Consensus
 
@@ -86,73 +84,37 @@ type countInfo struct {
 
 //NewBlockExplorer TODO
 func NewBlockExplorer(dbPath string, cs *pof.Consensus, port int) (*BlockExplorer, error) {
-	opts := badger.DefaultOptions(dbPath)
-	opts.Truncate = true
-	opts.SyncWrites = true
-	opts.ValueLogFileSize = 1 << 24
-	lockfilePath := filepath.Join(opts.Dir, "LOCK")
-	os.MkdirAll(dbPath, os.ModeDir)
-
-	os.Remove(lockfilePath)
-
-	db, err := badger.Open(opts)
+	DB, err := backend.Create("buntdb", "./ndata/explorer")
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-
-	{
-	again:
-		if err := db.RunValueLogGC(0.7); err != nil {
-		} else {
-			goto again
-		}
-	}
-
-	ticker := time.NewTicker(5 * time.Minute)
-	go func() {
-		for range ticker.C {
-		again:
-			if err := db.RunValueLogGC(0.7); err != nil {
-			} else {
-				goto again
-			}
-		}
-	}()
 
 	e := &BlockExplorer{
 		transactionCountList:   []*countInfo{},
 		lastestTransactionList: []txInfos{},
-		db:                     db,
+		db:                     DB,
 		cs:                     cs,
 		dataHandlerPacks:       []DataHandlerPack{},
 		port:                   port,
 	}
 
-	if err := e.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(blockChainInfoBytes)
+	if err := e.db.View(func(txn backend.StoreReader) error {
+		value, err := txn.Get(blockChainInfoBytes)
 		if err != nil {
-			if err != badger.ErrKeyNotFound {
+			if err != backend.ErrNotExistKey {
 				return err
 			}
 		} else {
-			value, err := item.ValueCopy(nil)
-			if err != nil {
-				return err
-			}
 			buf := bytes.NewBuffer(value)
 			e.CurrentChainInfo.ReadFrom(buf)
 		}
 
-		item, err = txn.Get(MaximumTpsBytes)
+		value, err = txn.Get(MaximumTpsBytes)
 		if err != nil {
-			if err != badger.ErrKeyNotFound {
+			if err != backend.ErrNotExistKey {
 				return err
 			}
 		} else {
-			value, err := item.ValueCopy(nil)
-			if err != nil {
-				return err
-			}
 			tps := util.BytesToUint32(value)
 			e.MaximumTps = int(tps)
 		}
@@ -173,7 +135,7 @@ func (e *BlockExplorer) Init(pm types.ProcessManager, p types.Provider) error {
 	return nil
 }
 
-var orderedTx = []byte("orderedTx")
+var reverseOrderedTx = []byte("orderedTx")
 
 func (e *BlockExplorer) OnLoadChain(loader types.Loader) error {
 	go e.StartExplorer(e.port)
@@ -181,18 +143,14 @@ func (e *BlockExplorer) OnLoadChain(loader types.Loader) error {
 	func(e *BlockExplorer) {
 		initHeightKey := []byte("initHeightKey")
 		var startHeight uint32
-		e.db.View(func(txn *badger.Txn) error {
-			item, err := txn.Get(initHeightKey)
+		e.db.View(func(txn backend.StoreReader) error {
+			value, err := txn.Get(initHeightKey)
 			if err != nil {
-				if err != badger.ErrKeyNotFound {
+				if err != backend.ErrNotExistKey {
 					return err
 				}
 				startHeight = 0
 			} else {
-				value, err := item.ValueCopy(nil)
-				if err != nil {
-					return err
-				}
 				startHeight = util.BytesToUint32(value)
 			}
 
@@ -208,7 +166,7 @@ func (e *BlockExplorer) OnLoadChain(loader types.Loader) error {
 			}
 			e.updateChain(b, fc, nil)
 
-			if err := e.db.Update(func(txn *badger.Txn) error {
+			if err := e.db.Update(func(txn backend.StoreWriter) error {
 				txn.Set(initHeightKey, util.Uint32ToBytes(i+1))
 				return nil
 			}); err != nil {
@@ -218,29 +176,17 @@ func (e *BlockExplorer) OnLoadChain(loader types.Loader) error {
 
 	}(e)
 
-	e.db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 500
-		opts.Reverse = true
-		it := txn.NewIterator(opts)
-		defer it.Close()
-
-		prefix := []byte(orderedTx)
-		prefixKey := append([]byte(orderedTx), 0xFF)
-		for it.Seek(prefixKey); it.ValidForPrefix(prefix); it.Next() {
-			item := it.Item()
-			err := item.Value(func(v []byte) error {
-				buf := bytes.NewBuffer(v)
-				ti := &txInfos{}
-				ti.ReadFrom(buf)
-				e.txinfoInsertSort(*ti)
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-		}
-		return nil
+	e.db.View(func(txn backend.StoreReader) error {
+		prefix := []byte(reverseOrderedTx)
+		//Iterate(prefix []byte, fn func(key []byte, value []byte) error) error
+		err := txn.Iterate(prefix, func(key []byte, value []byte) error {
+			buf := bytes.NewBuffer(value)
+			ti := &txInfos{}
+			ti.ReadFrom(buf)
+			e.txinfoInsertSort(*ti)
+			return nil
+		})
+		return err
 	})
 	return nil
 }
@@ -297,7 +243,7 @@ func (e *BlockExplorer) countinfoInsertSort(el *countInfo) {
 func (e *BlockExplorer) updateMaximumTps(count int) {
 	if e.MaximumTps < count {
 		e.MaximumTps = count
-		if err := e.db.Update(func(txn *badger.Txn) error {
+		if err := e.db.Update(func(txn backend.StoreWriter) error {
 			txn.Set(MaximumTpsBytes, util.Uint32ToBytes(uint32(e.MaximumTps)))
 			return nil
 		}); err != nil {
@@ -313,76 +259,77 @@ func (e *BlockExplorer) OnBlockConnected(b *types.Block, events []types.Event, l
 }
 
 func (e *BlockExplorer) updateChain(b *types.Block, fc *factory.Factory, insertTx func(el txInfos)) {
-	if err := e.db.Update(func(txn *badger.Txn) error {
-		// txn.Set(MaximumTpsBytes, util.Uint32ToBytes(uint32(e.MaximumTps)))
-		_, err := txn.Get([]byte(encoding.Hash(b.Header).String()))
-		if err != badger.ErrKeyNotFound {
-			return ErrAlreadyRegistrationBlock
-		}
+	e.db.View(func(txnr backend.StoreReader) error {
+		err := e.db.Update(func(txnw backend.StoreWriter) error {
+			// txn.Set(MaximumTpsBytes, util.Uint32ToBytes(uint32(e.MaximumTps)))
+			_, err := txnr.Get([]byte(encoding.Hash(b.Header).String()))
+			if err != backend.ErrNotExistKey {
+				return ErrAlreadyRegistrationBlock
+			}
 
-		e.CurrentChainInfo.currentTransactions = len(b.Transactions)
-		if e.CurrentChainInfo.Blocks < b.Header.Height {
-			e.CurrentChainInfo.Blocks = b.Header.Height
-		}
+			e.CurrentChainInfo.currentTransactions = len(b.Transactions)
+			if e.CurrentChainInfo.Blocks < b.Header.Height {
+				e.CurrentChainInfo.Blocks = b.Header.Height
+			}
 
-		e.countinfoInsertSort(&countInfo{
-			Time:  int64(b.Header.Timestamp),
-			Count: len(b.Transactions),
-		})
+			e.countinfoInsertSort(&countInfo{
+				Time:  int64(b.Header.Timestamp),
+				Count: len(b.Transactions),
+			})
 
-		value := util.Uint32ToBytes(b.Header.Height)
+			value := util.Uint32ToBytes(b.Header.Height | 0xFFFFFFFF)
 
-		txs := b.Transactions
-		for i, tx := range txs {
-			t := b.TransactionTypes[i]
-			name, err := fc.TypeName(t)
+			txs := b.Transactions
+			for i, tx := range txs {
+				t := b.TransactionTypes[i]
+				name, err := fc.TypeName(t)
+				if err != nil {
+					name = "UNKNOWN"
+				} else {
+					strs := strings.Split(name, "/")
+					name = strs[len(strs)-1]
+				}
+				ti := txInfos{
+					TxHash:    chain.HashTransactionByType(e.provider.ChainID(), t, tx).String(),
+					BlockHash: encoding.Hash(b.Header).String(),
+					Time:      tx.Timestamp(),
+					TxType:    name,
+				}
+				if insertTx != nil {
+					insertTx(ti)
+				}
+				iBs := util.Uint32ToBytes(uint32(i) | 0xFFFFFFFF)
+				v := append(value, iBs...)
+
+				buf := &bytes.Buffer{}
+				ti.WriteTo(buf)
+
+				if err := txnw.Set(append(reverseOrderedTx, v...), buf.Bytes()); err != nil {
+					return err
+				}
+
+			}
+
+			err = e.updateHashs(txnw, txnr, b, fc)
 			if err != nil {
-				name = "UNKNOWN"
-			} else {
-				strs := strings.Split(name, "/")
-				name = strs[len(strs)-1]
-			}
-			ti := txInfos{
-				TxHash:    chain.HashTransactionByType(e.provider.ChainID(), t, tx).String(),
-				BlockHash: encoding.Hash(b.Header).String(),
-				Time:      tx.Timestamp(),
-				TxType:    name,
-			}
-			if insertTx != nil {
-				insertTx(ti)
-			}
-
-			v := append(value, util.Uint32ToBytes(uint32(i))...)
-
-			buf := &bytes.Buffer{}
-			ti.WriteTo(buf)
-
-			if err := txn.Set(append(orderedTx, v...), buf.Bytes()); err != nil {
 				return err
 			}
 
-		}
+			buf := &bytes.Buffer{}
+			_, err = e.CurrentChainInfo.WriteTo(buf)
+			if err != nil {
+				return err
+			}
 
-		err = e.updateHashs(txn, b, fc)
-		if err != nil {
-			return err
-		}
+			e.CurrentChainInfo.Transactions += e.CurrentChainInfo.currentTransactions
 
-		buf := &bytes.Buffer{}
-		_, err = e.CurrentChainInfo.WriteTo(buf)
-		if err != nil {
-			return err
-		}
-
-		e.CurrentChainInfo.Transactions += e.CurrentChainInfo.currentTransactions
-
-		cs := e.cs.Candidates()
-		e.CurrentChainInfo.Foumulators = len(cs)
-		txn.Set(blockChainInfoBytes, buf.Bytes())
-		return nil
-	}); err != nil {
-		fmt.Errorf("err : %v", err)
-	}
+			cs := e.cs.Candidates()
+			e.CurrentChainInfo.Foumulators = len(cs)
+			txnw.Set(blockChainInfoBytes, buf.Bytes())
+			return nil
+		})
+		return err
+	})
 }
 
 var blockChainInfoBytes = []byte("blockChainInfo")
@@ -393,28 +340,24 @@ func (e *BlockExplorer) LastestTransactionLen() int {
 	return len(e.lastestTransactionList)
 }
 
-func (e *BlockExplorer) updateHashs(txn *badger.Txn, b *types.Block, fc *factory.Factory) error {
+func (e *BlockExplorer) updateHashs(txnw backend.StoreWriter, txnr backend.StoreReader, b *types.Block, fc *factory.Factory) error {
 	value := util.Uint32ToBytes(b.Header.Height)
 
 	h := encoding.Hash(b.Header).String()
-	if err := txn.Set([]byte(h), value); err != nil {
+	if err := txnw.Set([]byte(h), value); err != nil {
 		return err
 	}
 
 	formulatorAddr := []byte("formulator" + b.Header.Generator.String()) //FIXME
-	item, err := txn.Get(formulatorAddr)
+	value, err := txnr.Get(formulatorAddr)
 	if err != nil {
-		if err != badger.ErrKeyNotFound {
+		if err != backend.ErrNotExistKey {
 			return err
 		}
-		txn.Set(formulatorAddr, util.Uint32ToBytes(1))
+		txnw.Set(formulatorAddr, util.Uint32ToBytes(1))
 	} else {
-		value, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
 		height := util.BytesToUint32(value)
-		txn.Set(formulatorAddr, util.Uint32ToBytes(height+1))
+		txnw.Set(formulatorAddr, util.Uint32ToBytes(height+1))
 	}
 
 	txs := b.Transactions
@@ -423,7 +366,7 @@ func (e *BlockExplorer) updateHashs(txn *badger.Txn, b *types.Block, fc *factory
 
 		h := chain.HashTransactionByType(e.provider.ChainID(), t, tx)
 		v := append(value, util.Uint32ToBytes(uint32(i))...)
-		if err := txn.Set(h[:], v); err != nil {
+		if err := txnw.Set(h[:], v); err != nil {
 			return err
 		}
 
@@ -434,18 +377,14 @@ func (e *BlockExplorer) updateHashs(txn *badger.Txn, b *types.Block, fc *factory
 // GetBlockCount return block height
 func (e *BlockExplorer) GetBlockCount(formulatorAddr string) (height uint32) {
 	formulatorKey := []byte("formulator" + formulatorAddr)
-	e.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(formulatorKey)
+	e.db.View(func(txn backend.StoreReader) error {
+		value, err := txn.Get(formulatorKey)
 		if err != nil {
-			if err != badger.ErrKeyNotFound {
+			if err != backend.ErrNotExistKey {
 				return err
 			}
 			height = 0
 		} else {
-			value, err := item.ValueCopy(nil)
-			if err != nil {
-				return err
-			}
 			height = util.BytesToUint32(value)
 		}
 
