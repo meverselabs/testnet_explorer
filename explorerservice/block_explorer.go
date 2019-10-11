@@ -259,76 +259,73 @@ func (e *BlockExplorer) OnBlockConnected(b *types.Block, events []types.Event, l
 }
 
 func (e *BlockExplorer) updateChain(b *types.Block, fc *factory.Factory, insertTx func(el txInfos)) {
-	e.db.View(func(txnr backend.StoreReader) error {
-		err := e.db.Update(func(txnw backend.StoreWriter) error {
-			// txn.Set(MaximumTpsBytes, util.Uint32ToBytes(uint32(e.MaximumTps)))
-			_, err := txnr.Get([]byte(encoding.Hash(b.Header).String()))
-			if err != backend.ErrNotExistKey {
-				return ErrAlreadyRegistrationBlock
-			}
+	e.db.Update(func(txn backend.StoreWriter) error {
+		// txn.Set(MaximumTpsBytes, util.Uint32ToBytes(uint32(e.MaximumTps)))
+		_, err := txn.Get([]byte(encoding.Hash(b.Header).String()))
+		if err != backend.ErrNotExistKey {
+			return ErrAlreadyRegistrationBlock
+		}
 
-			e.CurrentChainInfo.currentTransactions = len(b.Transactions)
-			if e.CurrentChainInfo.Blocks < b.Header.Height {
-				e.CurrentChainInfo.Blocks = b.Header.Height
-			}
+		e.CurrentChainInfo.currentTransactions = len(b.Transactions)
+		if e.CurrentChainInfo.Blocks < b.Header.Height {
+			e.CurrentChainInfo.Blocks = b.Header.Height
+		}
 
-			e.countinfoInsertSort(&countInfo{
-				Time:  int64(b.Header.Timestamp),
-				Count: len(b.Transactions),
-			})
+		e.countinfoInsertSort(&countInfo{
+			Time:  int64(b.Header.Timestamp),
+			Count: len(b.Transactions),
+		})
 
-			value := util.Uint32ToBytes(b.Header.Height | 0xFFFFFFFF)
+		value := util.Uint32ToBytes(b.Header.Height | 0xFFFFFFFF)
 
-			txs := b.Transactions
-			for i, tx := range txs {
-				t := b.TransactionTypes[i]
-				name, err := fc.TypeName(t)
-				if err != nil {
-					name = "UNKNOWN"
-				} else {
-					strs := strings.Split(name, "/")
-					name = strs[len(strs)-1]
-				}
-				ti := txInfos{
-					TxHash:    chain.HashTransactionByType(e.provider.ChainID(), t, tx).String(),
-					BlockHash: encoding.Hash(b.Header).String(),
-					Time:      tx.Timestamp(),
-					TxType:    name,
-				}
-				if insertTx != nil {
-					insertTx(ti)
-				}
-				iBs := util.Uint32ToBytes(uint32(i) | 0xFFFFFFFF)
-				v := append(value, iBs...)
-
-				buf := &bytes.Buffer{}
-				ti.WriteTo(buf)
-
-				if err := txnw.Set(append(reverseOrderedTx, v...), buf.Bytes()); err != nil {
-					return err
-				}
-
-			}
-
-			err = e.updateHashs(txnw, txnr, b, fc)
+		txs := b.Transactions
+		for i, tx := range txs {
+			t := b.TransactionTypes[i]
+			name, err := fc.TypeName(t)
 			if err != nil {
-				return err
+				name = "UNKNOWN"
+			} else {
+				strs := strings.Split(name, "/")
+				name = strs[len(strs)-1]
 			}
+			ti := txInfos{
+				TxHash:    chain.HashTransactionByType(e.provider.ChainID(), t, tx).String(),
+				BlockHash: encoding.Hash(b.Header).String(),
+				Time:      tx.Timestamp(),
+				TxType:    name,
+			}
+			if insertTx != nil {
+				insertTx(ti)
+			}
+			iBs := util.Uint32ToBytes(uint32(i) | 0xFFFFFFFF)
+			v := append(value, iBs...)
 
 			buf := &bytes.Buffer{}
-			_, err = e.CurrentChainInfo.WriteTo(buf)
-			if err != nil {
+			ti.WriteTo(buf)
+
+			if err := txn.Set(append(reverseOrderedTx, v...), buf.Bytes()); err != nil {
 				return err
 			}
 
-			e.CurrentChainInfo.Transactions += e.CurrentChainInfo.currentTransactions
+		}
 
-			cs := e.cs.Candidates()
-			e.CurrentChainInfo.Foumulators = len(cs)
-			txnw.Set(blockChainInfoBytes, buf.Bytes())
-			return nil
-		})
-		return err
+		err = e.updateHashs(txn, b, fc)
+		if err != nil {
+			return err
+		}
+
+		buf := &bytes.Buffer{}
+		_, err = e.CurrentChainInfo.WriteTo(buf)
+		if err != nil {
+			return err
+		}
+
+		e.CurrentChainInfo.Transactions += e.CurrentChainInfo.currentTransactions
+
+		cs := e.cs.Candidates()
+		e.CurrentChainInfo.Foumulators = len(cs)
+		txn.Set(blockChainInfoBytes, buf.Bytes())
+		return nil
 	})
 }
 
@@ -340,24 +337,24 @@ func (e *BlockExplorer) LastestTransactionLen() int {
 	return len(e.lastestTransactionList)
 }
 
-func (e *BlockExplorer) updateHashs(txnw backend.StoreWriter, txnr backend.StoreReader, b *types.Block, fc *factory.Factory) error {
+func (e *BlockExplorer) updateHashs(txn backend.StoreWriter, b *types.Block, fc *factory.Factory) error {
 	value := util.Uint32ToBytes(b.Header.Height)
 
 	h := encoding.Hash(b.Header).String()
-	if err := txnw.Set([]byte(h), value); err != nil {
+	if err := txn.Set([]byte(h), value); err != nil {
 		return err
 	}
 
 	formulatorAddr := []byte("formulator" + b.Header.Generator.String()) //FIXME
-	value, err := txnr.Get(formulatorAddr)
+	value, err := txn.Get(formulatorAddr)
 	if err != nil {
 		if err != backend.ErrNotExistKey {
 			return err
 		}
-		txnw.Set(formulatorAddr, util.Uint32ToBytes(1))
+		txn.Set(formulatorAddr, util.Uint32ToBytes(1))
 	} else {
 		height := util.BytesToUint32(value)
-		txnw.Set(formulatorAddr, util.Uint32ToBytes(height+1))
+		txn.Set(formulatorAddr, util.Uint32ToBytes(height+1))
 	}
 
 	txs := b.Transactions
@@ -366,7 +363,7 @@ func (e *BlockExplorer) updateHashs(txnw backend.StoreWriter, txnr backend.Store
 
 		h := chain.HashTransactionByType(e.provider.ChainID(), t, tx)
 		v := append(value, util.Uint32ToBytes(uint32(i))...)
-		if err := txnw.Set(h[:], v); err != nil {
+		if err := txn.Set(h[:], v); err != nil {
 			return err
 		}
 
