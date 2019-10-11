@@ -55,6 +55,9 @@ func main() {
 	if len(cfg.StoreRoot) == 0 {
 		cfg.StoreRoot = "./ndata"
 	}
+	if cfg.WebPort == 0 {
+		cfg.WebPort = 80
+	}
 	if len(cfg.RLogHost) > 0 && cfg.UseRLog {
 		if len(cfg.RLogPath) == 0 {
 			cfg.RLogPath = "./ndata_rlog"
