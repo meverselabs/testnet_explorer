@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/fletaio/fleta_testnet/core/backend"
-	_ "github.com/fletaio/fleta_testnet/core/backend/buntdb_driver"
+	_ "github.com/fletaio/fleta_testnet/core/backend/badger_driver"
 	"github.com/fletaio/webserver"
 
 	"github.com/fletaio/fleta_testnet/pof"
@@ -84,7 +84,7 @@ type countInfo struct {
 
 //NewBlockExplorer TODO
 func NewBlockExplorer(dbPath string, cs *pof.Consensus, port int) (*BlockExplorer, error) {
-	DB, err := backend.Create("buntdb", "./ndata/explorer")
+	DB, err := backend.Create("badger", "./ndata/explorer")
 	if err != nil {
 		panic(err)
 	}
