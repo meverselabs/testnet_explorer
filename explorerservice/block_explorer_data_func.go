@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/fletaio/fleta/common/util"
+	"github.com/fletaio/fleta_testnet/common/util"
 
-	"github.com/fletaio/fleta/core/types"
-	"github.com/fletaio/fleta/encoding"
+	"github.com/fletaio/fleta_testnet/core/types"
+	"github.com/fletaio/fleta_testnet/encoding"
 )
 
 func (e *BlockExplorer) transactions() []*countInfo {
