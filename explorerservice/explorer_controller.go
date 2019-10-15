@@ -8,7 +8,7 @@ import (
 
 	"github.com/fletaio/fleta_testnet/core/backend"
 	"github.com/fletaio/fleta_testnet/common/hash"
-	"github.com/fletaio/fleta_testnet/common/util"
+	"github.com/fletaio/fleta_testnet/common/binutil"
 	"github.com/fletaio/fleta_testnet/core/chain"
 	"github.com/fletaio/fleta_testnet/encoding"
 )
@@ -59,7 +59,7 @@ func (e *ExplorerController) BlockDetail(r *http.Request) (map[string]string, er
 			if len(v) != 4 {
 				return ErrNotBlockHash
 			}
-			height = util.BytesToUint32(v)
+			height = binutil.LittleEndian.Uint32(v)
 			return nil
 		}); err != nil {
 			return nil, err
@@ -98,8 +98,8 @@ func (e *ExplorerController) TransactionDetail(r *http.Request) (map[string]stri
 	}
 
 	if len(v) == 8 {
-		blockHeight := util.BytesToUint32(v[0:4])
-		txIndex := util.BytesToUint32(v[4:8])
+		blockHeight := binutil.LittleEndian.Uint32(v[0:4])
+		txIndex := binutil.LittleEndian.Uint32(v[4:8])
 
 		if m, err := e.block.txDetailMap(blockHeight, txIndex); err == nil {
 			return m, nil

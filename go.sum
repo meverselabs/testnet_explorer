@@ -2,6 +2,7 @@ github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9 h1:HD8gA2tkBy
 github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9/go.mod h1:bOvUY6CB00SOBii9/FifXqc0awNKxLFCL/+pkDPuyl8=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=
+github.com/bluele/gcache v0.0.0-20190518031135-bc40bd653833 h1:yCfXxYaelOyqnia8F/Yng47qhmfC9nKTRIbYRrRueq4=
 github.com/bluele/gcache v0.0.0-20190518031135-bc40bd653833/go.mod h1:8c4/i2VlovMO2gBnHGQPN5EJw+H0lx1u/5p+cgsXtCk=
 github.com/bluele/slack v0.0.0-20180528010058-b4b4d354a079/go.mod h1:W679Ri2W93VLD8cVpEY/zLH1ow4zhJcCyjzrKxfM3QM=
 github.com/boltdb/bolt v1.3.1/go.mod h1:clJnj/oiGkjum5o1McbSZDSLxVThjynRyGBgiAx27Ps=
@@ -24,10 +25,8 @@ github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/edsrzf/mmap-go v1.0.0 h1:CEBF7HpRnUCSJgGUb5h1Gm7e3VkmVDrR8lvWVLtrOFw=
 github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
-github.com/fletaio/fleta_testnet v0.0.0-20191011065842-349b4bf48d91 h1:9rj+lDDO+OIrd6+OSv03Gnrk7gIZa9pCwQhtsF2Lhf0=
-github.com/fletaio/fleta_testnet v0.0.0-20191011065842-349b4bf48d91/go.mod h1:ZPvhqQln3P7mN5Opk4ib98yJAT6WZOlnAleR8ElKJ9s=
-github.com/fletaio/fleta_testnet v0.0.0-20191007073425-6913e010cfae h1:kE9K/0rkn+dFcE+brDhbwcpiSAz+c0Isb8b7Oe1Ig/Q=
-github.com/fletaio/fleta_testnet v0.0.0-20191007073425-6913e010cfae/go.mod h1:n9e6GEK7GHE0uUPuAraSpcURv/ohvcSfWN2F9ZwRTWw=
+github.com/fletaio/fleta_testnet v0.0.0-20191015172255-50b1a404fce7 h1:KrBShU6z8ofS6FBgeX/asUigux8uPPHAjrLdHlc8sJA=
+github.com/fletaio/fleta_testnet v0.0.0-20191015172255-50b1a404fce7/go.mod h1:gS0gKnf7fs+MuQO+IFW+hetP53QmqB0ij0D87gvj70k=
 github.com/fletaio/webserver v0.0.0-20190926090427-5a62061ed9ca h1:7jhSW1OI1O2NZQw19MPGk5n2oRuLk68loC7K19F/zgM=
 github.com/fletaio/webserver v0.0.0-20190926090427-5a62061ed9ca/go.mod h1:XwfXM59dgQevWarRrhCwvCtBaGVZz3fisUHCzrB7xHQ=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=

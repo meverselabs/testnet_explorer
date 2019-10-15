@@ -3,7 +3,7 @@ package explorerservice
 import (
 	"io"
 
-	"github.com/fletaio/fleta_testnet/common/util"
+	"github.com/fletaio/fleta_testnet/common/binutil"
 )
 
 type currentChainInfo struct {
@@ -17,22 +17,22 @@ type currentChainInfo struct {
 func (c *currentChainInfo) WriteTo(w io.Writer) (int64, error) {
 	var wrote int64
 
-	if n, err := w.Write(util.Uint32ToBytes(uint32(c.Foumulators))); err != nil {
+	if n, err := w.Write(binutil.LittleEndian.Uint32ToBytes(uint32(c.Foumulators))); err != nil {
 		return wrote, err
 	} else {
 		wrote += int64(n)
 	}
-	if n, err := w.Write(util.Uint32ToBytes(uint32(c.Blocks))); err != nil {
+	if n, err := w.Write(binutil.LittleEndian.Uint32ToBytes(uint32(c.Blocks))); err != nil {
 		return wrote, err
 	} else {
 		wrote += int64(n)
 	}
-	if n, err := w.Write(util.Uint32ToBytes(uint32(c.Transactions))); err != nil {
+	if n, err := w.Write(binutil.LittleEndian.Uint32ToBytes(uint32(c.Transactions))); err != nil {
 		return wrote, err
 	} else {
 		wrote += int64(n)
 	}
-	if n, err := w.Write(util.Uint32ToBytes(uint32(c.currentTransactions))); err != nil {
+	if n, err := w.Write(binutil.LittleEndian.Uint32ToBytes(uint32(c.currentTransactions))); err != nil {
 		return wrote, err
 	} else {
 		wrote += int64(n)
@@ -49,25 +49,25 @@ func (c *currentChainInfo) ReadFrom(r io.Reader) (int64, error) {
 		return read, err
 	} else {
 		read += int64(n)
-		c.Foumulators = int(util.BytesToUint32(bs))
+		c.Foumulators = int(binutil.LittleEndian.Uint32(bs))
 	}
 	if n, err := r.Read(bs); err != nil {
 		return read, err
 	} else {
 		read += int64(n)
-		c.Blocks = util.BytesToUint32(bs)
+		c.Blocks = binutil.LittleEndian.Uint32(bs)
 	}
 	if n, err := r.Read(bs); err != nil {
 		return read, err
 	} else {
 		read += int64(n)
-		c.Transactions = int(util.BytesToUint32(bs))
+		c.Transactions = int(binutil.LittleEndian.Uint32(bs))
 	}
 	if n, err := r.Read(bs); err != nil {
 		return read, err
 	} else {
 		read += int64(n)
-		c.currentTransactions = int(util.BytesToUint32(bs))
+		c.currentTransactions = int(binutil.LittleEndian.Uint32(bs))
 	}
 
 	return read, nil

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/fletaio/fleta_testnet/common/util"
+	"github.com/fletaio/fleta_testnet/common/binutil"
 
 	"github.com/fletaio/fleta_testnet/core/types"
 	"github.com/fletaio/fleta_testnet/encoding"
@@ -118,7 +118,7 @@ func (c *txInfos) WriteTo(w io.Writer) (wrote int64, err error) {
 			return
 		}
 		wrote += wn
-		n, err2 := w.Write(util.Uint64ToBytes(c.Time))
+		n, err2 := w.Write(binutil.LittleEndian.Uint64ToBytes(c.Time))
 		if err2 != nil {
 			return wrote, err2
 		}
@@ -159,7 +159,7 @@ func (c *txInfos) ReadFrom(r io.Reader) (read int64, err error) {
 			return read, err2
 		}
 		read += int64(n)
-		c.Time = util.BytesToUint64(bs)
+		c.Time = binutil.LittleEndian.Uint64(bs)
 
 		c.TxType, rn, err = readString(r)
 		read += rn
@@ -174,7 +174,7 @@ func (c *txInfos) ReadFrom(r io.Reader) (read int64, err error) {
 func writeString(w io.Writer, str string) (int64, error) {
 	var wrote int64
 	bs := []byte(str)
-	n, err := w.Write(util.Uint16ToBytes(uint16(len(bs))))
+	n, err := w.Write(binutil.LittleEndian.Uint16ToBytes(uint16(len(bs))))
 	if err != nil {
 		return wrote, err
 	}
@@ -197,7 +197,7 @@ func readString(r io.Reader) (string, int64, error) {
 		return "", read, err
 	}
 	read += int64(n)
-	bsBs := make([]byte, util.BytesToUint16(bs))
+	bsBs := make([]byte, binutil.LittleEndian.Uint16(bs))
 
 	nInt, err := r.Read(bsBs)
 	if err != nil {
@@ -304,7 +304,7 @@ func (e *BlockExplorer) formulators() []formulatorInfos {
 	cs := e.cs.Candidates()
 	for _, c := range cs {
 		addr := c.Address.String()
-		acc, err := e.provider.NewContextWrapper(0).Account(c.Address)
+		acc, err := e.provider.NewLoaderWrapper(0).Account(c.Address)
 		if err != nil {
 			aaData = append(aaData, formulatorInfos{
 				Address:    addr,

@@ -1,4 +1,4 @@
-package main // imports "github.com/fletaio/testnet_explorerd"
+package main
 
 import (
 	"encoding/hex"

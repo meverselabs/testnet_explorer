@@ -18,8 +18,8 @@ import (
 
 	"github.com/fletaio/fleta_testnet/pof"
 
+	"github.com/fletaio/fleta_testnet/common/binutil"
 	"github.com/fletaio/fleta_testnet/common/factory"
-	"github.com/fletaio/fleta_testnet/common/util"
 	"github.com/fletaio/fleta_testnet/core/chain"
 	"github.com/fletaio/fleta_testnet/core/types"
 	"github.com/fletaio/fleta_testnet/encoding"
@@ -115,7 +115,7 @@ func NewBlockExplorer(dbPath string, cs *pof.Consensus, port int) (*BlockExplore
 				return err
 			}
 		} else {
-			tps := util.BytesToUint32(value)
+			tps := binutil.LittleEndian.Uint32(value)
 			e.MaximumTps = int(tps)
 		}
 
@@ -151,7 +151,7 @@ func (e *BlockExplorer) OnLoadChain(loader types.Loader) error {
 				}
 				startHeight = 0
 			} else {
-				startHeight = util.BytesToUint32(value)
+				startHeight = binutil.LittleEndian.Uint32(value)
 			}
 
 			return nil
@@ -167,7 +167,7 @@ func (e *BlockExplorer) OnLoadChain(loader types.Loader) error {
 			e.updateChain(b, fc, nil)
 
 			if err := e.db.Update(func(txn backend.StoreWriter) error {
-				txn.Set(initHeightKey, util.Uint32ToBytes(i+1))
+				txn.Set(initHeightKey, binutil.LittleEndian.Uint32ToBytes(i+1))
 				return nil
 			}); err != nil {
 				fmt.Errorf("err : %v", err)
@@ -244,7 +244,7 @@ func (e *BlockExplorer) updateMaximumTps(count int) {
 	if e.MaximumTps < count {
 		e.MaximumTps = count
 		if err := e.db.Update(func(txn backend.StoreWriter) error {
-			txn.Set(MaximumTpsBytes, util.Uint32ToBytes(uint32(e.MaximumTps)))
+			txn.Set(MaximumTpsBytes, binutil.LittleEndian.Uint32ToBytes(uint32(e.MaximumTps)))
 			return nil
 		}); err != nil {
 			fmt.Errorf("err : %v", err)
@@ -260,7 +260,7 @@ func (e *BlockExplorer) OnBlockConnected(b *types.Block, events []types.Event, l
 
 func (e *BlockExplorer) updateChain(b *types.Block, fc *factory.Factory, insertTx func(el txInfos)) {
 	e.db.Update(func(txn backend.StoreWriter) error {
-		// txn.Set(MaximumTpsBytes, util.Uint32ToBytes(uint32(e.MaximumTps)))
+		// txn.Set(MaximumTpsBytes, binutil.LittleEndian.Uint32ToBytes(uint32(e.MaximumTps)))
 		_, err := txn.Get([]byte(encoding.Hash(b.Header).String()))
 		if err != backend.ErrNotExistKey {
 			return ErrAlreadyRegistrationBlock
@@ -276,7 +276,7 @@ func (e *BlockExplorer) updateChain(b *types.Block, fc *factory.Factory, insertT
 			Count: len(b.Transactions),
 		})
 
-		value := util.Uint32ToBytes(b.Header.Height | 0xFFFFFFFF)
+		value := binutil.LittleEndian.Uint32ToBytes(b.Header.Height | 0xFFFFFFFF)
 
 		txs := b.Transactions
 		for i, tx := range txs {
@@ -297,7 +297,7 @@ func (e *BlockExplorer) updateChain(b *types.Block, fc *factory.Factory, insertT
 			if insertTx != nil {
 				insertTx(ti)
 			}
-			iBs := util.Uint32ToBytes(uint32(i) | 0xFFFFFFFF)
+			iBs := binutil.LittleEndian.Uint32ToBytes(uint32(i) | 0xFFFFFFFF)
 			v := append(value, iBs...)
 
 			buf := &bytes.Buffer{}
@@ -338,7 +338,7 @@ func (e *BlockExplorer) LastestTransactionLen() int {
 }
 
 func (e *BlockExplorer) updateHashs(txn backend.StoreWriter, b *types.Block, fc *factory.Factory) error {
-	value := util.Uint32ToBytes(b.Header.Height)
+	value := binutil.LittleEndian.Uint32ToBytes(b.Header.Height)
 
 	h := encoding.Hash(b.Header).String()
 	if err := txn.Set([]byte(h), value); err != nil {
@@ -351,10 +351,10 @@ func (e *BlockExplorer) updateHashs(txn backend.StoreWriter, b *types.Block, fc 
 		if err != backend.ErrNotExistKey {
 			return err
 		}
-		txn.Set(formulatorAddr, util.Uint32ToBytes(1))
+		txn.Set(formulatorAddr, binutil.LittleEndian.Uint32ToBytes(1))
 	} else {
-		height := util.BytesToUint32(value)
-		txn.Set(formulatorAddr, util.Uint32ToBytes(height+1))
+		height := binutil.LittleEndian.Uint32(value)
+		txn.Set(formulatorAddr, binutil.LittleEndian.Uint32ToBytes(height+1))
 	}
 
 	txs := b.Transactions
@@ -362,7 +362,7 @@ func (e *BlockExplorer) updateHashs(txn backend.StoreWriter, b *types.Block, fc 
 		t := b.TransactionTypes[i]
 
 		h := chain.HashTransactionByType(e.provider.ChainID(), t, tx)
-		v := append(value, util.Uint32ToBytes(uint32(i))...)
+		v := append(value, binutil.LittleEndian.Uint32ToBytes(uint32(i))...)
 		if err := txn.Set(h[:], v); err != nil {
 			return err
 		}
@@ -382,7 +382,7 @@ func (e *BlockExplorer) GetBlockCount(formulatorAddr string) (height uint32) {
 			}
 			height = 0
 		} else {
-			height = util.BytesToUint32(value)
+			height = binutil.LittleEndian.Uint32(value)
 		}
 
 		return nil
