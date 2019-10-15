@@ -16,13 +16,13 @@ import (
 	_ "github.com/fletaio/fleta/core/backend/buntdb_driver"
 	"github.com/fletaio/webserver"
 
-	"github.com/fletaio/fleta_testnet/pof"
+	"github.com/fletaio/fleta/pof"
 
-	"github.com/fletaio/fleta_testnet/common/factory"
-	"github.com/fletaio/fleta_testnet/common/util"
-	"github.com/fletaio/fleta_testnet/core/chain"
-	"github.com/fletaio/fleta_testnet/core/types"
-	"github.com/fletaio/fleta_testnet/encoding"
+	"github.com/fletaio/fleta/common/factory"
+	"github.com/fletaio/fleta/common/util"
+	"github.com/fletaio/fleta/core/chain"
+	"github.com/fletaio/fleta/core/types"
+	"github.com/fletaio/fleta/encoding"
 	"github.com/labstack/echo/v4"
 )
 

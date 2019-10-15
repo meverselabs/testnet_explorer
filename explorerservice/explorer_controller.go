@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/fletaio/fleta/core/backend"
-	"github.com/fletaio/fleta_testnet/common/hash"
-	"github.com/fletaio/fleta_testnet/common/util"
-	"github.com/fletaio/fleta_testnet/core/chain"
-	"github.com/fletaio/fleta_testnet/encoding"
+	"github.com/fletaio/fleta/common/hash"
+	"github.com/fletaio/fleta/common/util"
+	"github.com/fletaio/fleta/core/chain"
+	"github.com/fletaio/fleta/encoding"
 )
 
 type ExplorerController struct {

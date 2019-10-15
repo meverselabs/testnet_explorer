@@ -1,4 +1,4 @@
-package main // imports "github.com/fletaio/testnet_explorer_old/cmd/testnet_explorer"
+package main // imports "github.com/fletaio/testnet_explorerd"
 
 import (
 	"encoding/hex"
@@ -8,28 +8,28 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/fletaio/fleta_testnet/core/pile"
+	"github.com/fletaio/fleta/core/pile"
 	"github.com/fletaio/testnet_explorer/explorerservice"
 
-	"github.com/fletaio/fleta_testnet/cmd/app"
-	"github.com/fletaio/fleta_testnet/cmd/closer"
-	"github.com/fletaio/fleta_testnet/cmd/config"
-	"github.com/fletaio/fleta_testnet/common"
-	"github.com/fletaio/fleta_testnet/common/key"
-	"github.com/fletaio/fleta_testnet/common/rlog"
-	"github.com/fletaio/fleta_testnet/core/backend"
-	_ "github.com/fletaio/fleta_testnet/core/backend/badger_driver"
-	_ "github.com/fletaio/fleta_testnet/core/backend/buntdb_driver"
-	"github.com/fletaio/fleta_testnet/core/chain"
-	"github.com/fletaio/fleta_testnet/core/types"
-	"github.com/fletaio/fleta_testnet/pof"
-	"github.com/fletaio/fleta_testnet/process/admin"
-	"github.com/fletaio/fleta_testnet/process/formulator"
-	"github.com/fletaio/fleta_testnet/process/gateway"
-	"github.com/fletaio/fleta_testnet/process/payment"
-	"github.com/fletaio/fleta_testnet/process/vault"
-	"github.com/fletaio/fleta_testnet/service/apiserver"
-	"github.com/fletaio/fleta_testnet/service/p2p"
+	"github.com/fletaio/fleta/cmd/app"
+	"github.com/fletaio/fleta/cmd/closer"
+	"github.com/fletaio/fleta/cmd/config"
+	"github.com/fletaio/fleta/common"
+	"github.com/fletaio/fleta/common/key"
+	"github.com/fletaio/fleta/common/rlog"
+	"github.com/fletaio/fleta/core/backend"
+	_ "github.com/fletaio/fleta/core/backend/badger_driver"
+	_ "github.com/fletaio/fleta/core/backend/buntdb_driver"
+	"github.com/fletaio/fleta/core/chain"
+	"github.com/fletaio/fleta/core/types"
+	"github.com/fletaio/fleta/pof"
+	"github.com/fletaio/fleta/process/admin"
+	"github.com/fletaio/fleta/process/formulator"
+	"github.com/fletaio/fleta/process/gateway"
+	"github.com/fletaio/fleta/process/payment"
+	"github.com/fletaio/fleta/process/vault"
+	"github.com/fletaio/fleta/service/apiserver"
+	"github.com/fletaio/fleta/service/p2p"
 )
 
 // Config is a configuration for the cmd
@@ -114,6 +114,10 @@ func main() {
 		}
 		SeedNodeMap[pubhash] = netAddr
 	}
+	SeedNodeMap[common.MustParsePublicHash("4YjmYcLVvBSmtjh4Z7frRZhWgdEAYTSABCoqqzhKEJa")] = "199.247.2.136:41000"
+	SeedNodeMap[common.MustParsePublicHash("3ZdKaqaCbGSQ5xmAphzVTeEF1eGzX6iU4LLGD2ox2g9")] = "45.77.59.252:41000"
+	SeedNodeMap[common.MustParsePublicHash("3PuvivcsCzqkHhhWNfeTF2AbJurRLsq7Mt1AiYSLyP5")] = "140.82.63.172:41000"
+	SeedNodeMap[common.MustParsePublicHash("CV3cNk8UZxJcsLYjSgMdKuMf7VbDnbHXyqvb2rSE4y")] = "45.76.247.209:41000"
 
 	MaxBlocksPerFormulator := uint32(10)
 	ChainID := uint8(0x01)

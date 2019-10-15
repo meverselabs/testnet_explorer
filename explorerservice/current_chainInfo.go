@@ -3,7 +3,7 @@ package explorerservice
 import (
 	"io"
 
-	"github.com/fletaio/fleta_testnet/common/util"
+	"github.com/fletaio/fleta/common/util"
 )
 
 type currentChainInfo struct {

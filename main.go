@@ -1,4 +1,4 @@
-package main // imports "github.com/fletaio/testnet_explorer_old"
+package main // imports "github.com/fletaio/testnet_explorer"
 
 func main() {
 }
