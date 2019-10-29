@@ -87,9 +87,23 @@ lineChart.prototype.draw = function () {
             This.y = d3.scale.linear().domain([0, This.countMax]).range([This.h, 0]);
 
             This.line = d3.svg.line().x(d => This.x(d.time)).y(d => This.y(d.count));
-        }
+		}
 
-        This.states = d;
+		if (d.length > 0) {
+			for (var i = 1 ; i < d.length ; i++) {
+				if (d[i-1].time < d[i].time-1) {
+					d.splice(i, 0, {
+						time : parseInt((d[i-1].time+d[i].time)/2),
+						count : (d[i-1].count+d[i].count)/2,
+						empty : true,
+					})
+					i++
+					console.log("noe")
+				}
+			}
+		}
+
+		This.states = d;
 
         This.chart
             .append("g")
@@ -107,7 +121,7 @@ lineChart.prototype.draw = function () {
             .attr('r', '4')
             .attr('cx', d=>This.x(d.time))
             .attr('cy', d=>This.y(d.count))
-            .attr('fill', This.color)
+            .attr('fill', d=>d.empty?"#4004fd":This.color)
 
         This.chart
             .append("g").selectAll("circle")
