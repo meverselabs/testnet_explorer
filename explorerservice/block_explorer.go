@@ -362,8 +362,8 @@ func (e *BlockExplorer) updateHashs(txn backend.StoreWriter, b *types.Block, fc 
 		t := b.TransactionTypes[i]
 
 		h := chain.HashTransactionByType(e.provider.ChainID(), t, tx)
-		v := append(value, binutil.LittleEndian.Uint32ToBytes(uint32(i))...)
-		if err := txn.Set(h[:], v); err != nil {
+		txid := types.TransactionID(b.Header.Height, uint16(i))
+		if err := txn.Set(h[:], []byte(txid)); err != nil {
 			return err
 		}
 

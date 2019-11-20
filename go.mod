@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/dgraph-io/badger v1.6.0
-	github.com/fletaio/fleta_testnet v0.0.0-20191015172255-50b1a404fce7
+	github.com/fletaio/fleta_testnet v0.0.0-20191120105654-2439a8549d7c
 	github.com/fletaio/webserver v0.0.0-20190926090427-5a62061ed9ca
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/labstack/echo/v4 v4.1.11

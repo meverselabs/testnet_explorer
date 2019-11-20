@@ -6,9 +6,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/fletaio/fleta_testnet/core/backend"
-	"github.com/fletaio/fleta_testnet/common/hash"
+	"github.com/fletaio/fleta_testnet/core/types"
+
 	"github.com/fletaio/fleta_testnet/common/binutil"
+	"github.com/fletaio/fleta_testnet/common/hash"
+	"github.com/fletaio/fleta_testnet/core/backend"
 	"github.com/fletaio/fleta_testnet/core/chain"
 	"github.com/fletaio/fleta_testnet/encoding"
 )
@@ -97,23 +99,19 @@ func (e *ExplorerController) TransactionDetail(r *http.Request) (map[string]stri
 		return nil, err
 	}
 
-	if len(v) == 8 {
-		blockHeight := binutil.LittleEndian.Uint32(v[0:4])
-		txIndex := binutil.LittleEndian.Uint32(v[4:8])
-
-		if m, err := e.block.txDetailMap(blockHeight, txIndex); err == nil {
-			return m, nil
-		} else {
-			return nil, err
-		}
-
-	} else {
-		return nil, ErrNotTransactionHash
+	blockHeight, txIndex, err := types.ParseTransactionID(string(v))
+	if err != nil {
+		return nil, err
 	}
 
+	if m, err := e.block.txDetailMap(blockHeight, txIndex); err == nil {
+		return m, nil
+	} else {
+		return nil, err
+	}
 }
 
-func (e *BlockExplorer) txDetailMap(height uint32, txIndex uint32) (map[string]string, error) {
+func (e *BlockExplorer) txDetailMap(height uint32, txIndex uint16) (map[string]string, error) {
 	m := map[string]interface{}{}
 
 	b, err := e.provider.Block(height)
